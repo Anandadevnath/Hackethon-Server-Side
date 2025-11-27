@@ -1,7 +1,5 @@
-import { verifyMail } from "../emailVerify/verifyMail.js"
 import { Farmer } from "../models/userModel.js"
 import { Session } from "../models/sessionModel.js"
-import { sendOtpMail } from "../emailVerify/sendOtpMail.js"
 import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 import { isValidObjectId } from "mongoose"
@@ -32,18 +30,45 @@ export const registerUser = async (req,res) =>{
         phone,
         password:hashedPassword,
         preferredLanguage: preferredLanguage || undefined,
-        location: location || undefined
+        location: location || undefined,
+        isVerified: true
       })
-      const token = jwt.sign({id:newUser._id,},
-        process.env.SECRET_KEY,{expiresIn:"10m"}
-    )
-      verifyMail(token,email)
-      newUser.token=token
+      
+      //create session for the new user
+      await Session.create({userId:newUser._id})
+      
+      //generate tokens for immediate login
+      const accessToken = jwt.sign({id:newUser._id},
+        process.env.SECRET_KEY,{expiresIn:"10d"})
+
+      const refreshSecret = process.env.REFRESH_SECRET_KEY || process.env.SECRET_KEY
+      const refreshToken = jwt.sign({id:newUser._id}, refreshSecret, {expiresIn:"30d"})
+
+      newUser.isLoggedIn = true
       await newUser.save()
+      
+      // Create clean user object without sensitive fields
+      const userData = {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        preferredLanguage: newUser.preferredLanguage,
+        location: newUser.location,
+        badges: newUser.badges,
+        role: newUser.role,
+        isLoggedIn: newUser.isLoggedIn,
+        createdAt: newUser.createdAt,
+        updatedAt: newUser.updatedAt,
+        __v: newUser.__v
+      }
+      
       return res.status(201).json({
         success:true,
         message:"User registered successfully",
-        data:newUser
+        accessToken,
+        refreshToken,
+        data:userData
       })
  }
  catch(error){
@@ -54,60 +79,7 @@ export const registerUser = async (req,res) =>{
  }
 
 }
-export const verification =async (req,res) =>{
-  
-  try{
-       const authHeader = req.headers.authorization;
-       if(!authHeader || !authHeader.startsWith('Bearer ')){
-        return res.status(401).json({
-            success:false,
-            message:"Authorization token missing or invalid"
-        })
-       }
 
-       const token = authHeader.split(' ')[1];
-
-       let decoded;
-       try{
-          decoded = jwt.verify(token,process.env.SECRET_KEY)
-       }
-       catch(error){
-        if(error.name === 'TokenExpiredError'){
-            return res.status(401).json({
-                success:false,
-                message:"Token has expired"
-            })
-        }
-        return res.status(401).json({
-            success:false,
-            message:"Token verification failed"
-        })
-       }
-        const user = await Farmer.findById(decoded.id)
-       if(!user){
-        return res.status(404).json({
-            success:false,
-            message:"User not found"
-        })
-       }
-
-        user.token = null
-        user.isVerified = true
-        await user.save()
-
-        return res.status(200).json({
-            success:true,
-            message:"Email verified successfully"
-        })
-  }
-  catch(error){
-    return res.status(500).json({
-     success:false,
-     message:error.message
-    })
-  }
-
-}
 //login 
 export const loginUser = async(req,res) =>{
    try{
@@ -136,13 +108,7 @@ export const loginUser = async(req,res) =>{
             message:"Incorrect password"
         })
       }
-      //check if user is verified
-      if(user.isVerified !== true){
-        return res.status(403).json({
-            success:false,
-            message:"Verify your email to login"
-        })
-      }
+      
       //check for existing session and delete it
       const existingSession = await Session.findOne({userId:user._id})
       if(existingSession){
@@ -205,135 +171,7 @@ export const logoutUser = async (req, res) => {
 
 }
 //forget password
-export const forgetPassword = async (req,res) =>{
-  try{
-    const {email} = req.body;
-    const user = await Farmer.findOne({email})
-    if(!user){
-      return res.status(404).json({
-        success:false,
-        message:"User not found"
-      })
-    }
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    await user.save();
-    //send otp via email
-    await sendOtpMail(email,otp);
-    return res.status(200).json({
-      success:true,
-      message:"OTP sent to your email"
-    })
-  }
-  catch(error){
-    return res.status(500).json({
-      success:false,
-      message:error.message
-    })
 
-  }
-}
-
-export const verifyOtp = async (req, res) => {
-  try {
-    const { otp } = req.body;
-    const email = req.params.email;
-
-    if (!otp) {
-      return res.status(400).json({
-        success: false,
-        message: "OTP is required"
-      });
-    }
-
-    const user = await Farmer.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    if (!user.otp || !user.otpExpiry) {
-      return res.status(400).json({
-        success: false,
-        message: "No OTP found, please request a new one or already validated"
-      });
-    }
-
-    if (user.otpExpiry < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: "OTP has expired, please request a new one"
-      });
-    }
-
-    if (user.otp !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP"
-      });
-    }
-    user.otp = null;
-    user.otpExpiry = null;
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "OTP verified successfully"
-    });
-  }
-  catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-}
-
-export const changePassword = async (req, res) => {
-
-  const { newPassword,confirmPassword } = req.body;
-  const email = req.params.email;
-  if (!newPassword || !confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "Both new password and confirm password are required"
-    });
-  }
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "Passwords do not match"
-    });
-  }
-  try {
-    const user = await Farmer.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Password reset successfully"
-    });
-}catch(error){
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-}
-
-}
 
 export const updateFarmer = async (req, res) => {
   try {
