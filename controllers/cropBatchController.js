@@ -70,3 +70,23 @@ export const updateCropBatch = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const deleteCropBatch = async (req, res) => {
+  try {
+    const batchId = req.params.id;
+    const farmerId = req.userId;
+    if (!farmerId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!isValidObjectId(batchId)) return res.status(400).json({ success: false, message: 'Invalid batch id' });
+
+    const batch = await CropBatch.findById(batchId);
+    if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
+    if (batch.farmerId.toString() !== farmerId.toString()) {
+      return res.status(403).json({ success: false, message: 'Forbidden: cannot delete another farmer\'s batch' });
+    }
+
+    await CropBatch.deleteOne({ _id: batchId });
+    return res.status(200).json({ success: true, message: 'Batch deleted' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
