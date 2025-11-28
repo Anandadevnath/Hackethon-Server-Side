@@ -1,28 +1,88 @@
-import express from "express"
-import 'dotenv/config'
-import cors from 'cors'
-import connectDB from "./database/db.js"
-import userRoute from "./routes/userRoute.js"
-import cropRoute from "./routes/cropRoute.js"
-import adminRoute from "./routes/adminRoute.js"
-const app = express()
+// server.js
+import express from "express";
+import "dotenv/config";
+import cors from "cors";
+import connectDB from "./database/db.js";
+import userRoute from "./routes/userRoute.js";
+import cropRoute from "./routes/cropRoute.js";
+import adminRoute from "./routes/adminRoute.js";
+import { Buffer } from "buffer";
+import fetch from "node-fetch"; // if using Node 18+, native fetch is fine
 
-const PORT = process.env.PORT || 3000
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json())
+// -------------------- MIDDLEWARE --------------------
 
-// CORS: allow requests from any origin. Use with caution in production.
-// Using `origin: true` reflects the request origin, which allows credentials.
-app.use(cors({ origin: true, credentials: true }))
+// JSON parsing, allow up to 10MB for image uploads
+app.use(express.json({ limit: "10mb" }));
 
-// Routes
-app.use("/user", userRoute)
-app.use("/crop", cropRoute)
-app.use("/panel", adminRoute)
-//http://localhost:8000/user/register
+// CORS: allow requests from any origin. Update in production as needed
+app.use(cors({ origin: true, credentials: true }));
 
-app.listen(PORT,()=>{
-    connectDB()
- console.log(`server is running at port ${PORT}`)
- 
-})
+// -------------------- DATABASE --------------------
+connectDB();
+
+// -------------------- ROUTES --------------------
+
+// Main app routes
+app.use("/user", userRoute);
+app.use("/crop", cropRoute);
+app.use("/panel", adminRoute);
+
+// -------------------- CROP SCANNER API --------------------
+
+const HF_API_TOKEN = process.env.HF_API_TOKEN;
+const HF_MODEL_ID = "wambugu71/crop_leaf_diseases_vit";
+
+if (!HF_API_TOKEN) {
+  console.warn("Warning: HF_API_TOKEN is not set in .env");
+}
+
+// Simple GET to test API
+app.get("/api/predict", (req, res) => {
+  res.json({ ok: true, message: "GET /api/predict is alive" });
+});
+
+// POST for image classification
+app.post("/api/predict", async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ error: "imageBase64 is required" });
+    }
+
+    // Decode base64 -> Buffer
+    const base64Data = imageBase64.split(",")[1] || imageBase64;
+    const imgBuffer = Buffer.from(base64Data, "base64");
+
+    const hfRes = await fetch(
+      `https://router.huggingface.co/hf-inference/models/${HF_MODEL_ID}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${HF_API_TOKEN}`,
+          "Content-Type": "image/jpeg",
+        },
+        body: imgBuffer,
+      }
+    );
+
+    if (!hfRes.ok) {
+      const text = await hfRes.text();
+      console.error("HF error:", hfRes.status, text);
+      return res.status(hfRes.status).json({ error: "HF error", detail: text });
+    }
+
+    const result = await hfRes.json();
+    return res.json(result);
+  } catch (err) {
+    console.error("Server error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// -------------------- START SERVER --------------------
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
