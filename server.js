@@ -4,6 +4,7 @@ import cors from 'cors'
 import connectDB from "./database/db.js"
 import userRoute from "./routes/userRoute.js"
 import cropRoute from "./routes/cropRoute.js"
+import adminRoute from "./routes/adminRoute.js"
 const app = express()
 
 const PORT = process.env.PORT || 3000
@@ -17,6 +18,7 @@ app.use(cors({ origin: true, credentials: true }))
 // Routes
 app.use("/user", userRoute)
 app.use("/crop", cropRoute)
+app.use("/panel", adminRoute)
 //http://localhost:8000/user/register
 
 app.listen(PORT,()=>{
