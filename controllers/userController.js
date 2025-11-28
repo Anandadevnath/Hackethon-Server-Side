@@ -2,6 +2,7 @@ import { Farmer } from "../models/userModel.js"
 import { Session } from "../models/sessionModel.js"
 import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
+import nodemailer from "nodemailer"
 import { isValidObjectId } from "mongoose"
 export const registerUser = async (req,res) =>{
  try{
@@ -172,6 +173,135 @@ export const logoutUser = async (req, res) => {
 }
 //forget password
 
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' })
+
+    const user = await Farmer.findOne({ email })
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    // generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const hashedOtp = await bcrypt.hash(otp, 10)
+
+    user.otp = hashedOtp
+    user.otpExpiry = Date.now() + 15 * 60 * 1000 // 15 minutes
+    await user.save()
+    // If email credentials are not configured, provide a friendly fallback
+    // Accept either `EMAIL_USER`/`EMAIL_PASS` or `MAIL_USER`/`MAIL_PASS`.
+    const emailUser = process.env.EMAIL_USER || process.env.MAIL_USER
+    let emailPass = process.env.EMAIL_PASS || process.env.MAIL_PASS
+    // App passwords are often shown with spaces when copied from Google UI; strip spaces if present
+    if (emailPass) emailPass = String(emailPass).replace(/\s+/g, '')
+    if (!emailUser || !emailPass) {
+      // In production we should fail loudly; in development we log OTP to console for testing
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ success: false, message: 'Mail credentials not configured on server' })
+      }
+
+      console.log(`DEV MODE: Password reset OTP for ${user.email} is: ${otp}`)
+      return res.status(200).json({ success: true, message: 'OTP logged to server console (development only)' })
+    }
+
+    // send email using nodemailer
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    })
+
+    const mailOptions = {
+      from: emailUser,
+      to: user.email,
+      subject: 'Password Reset OTP',
+      text: `Your password reset OTP is: ${otp}. It expires in 15 minutes.`
+    }
+
+    try {
+      await transporter.sendMail(mailOptions)
+      return res.status(200).json({ success: true, message: 'OTP sent to email' })
+    } catch (mailError) {
+      const errMsg = (mailError && (mailError.response || mailError.message)) || String(mailError)
+      const isGmailAuthError = /BadCredentials|Username and Password not accepted|Invalid login/i.test(errMsg)
+
+      if (isGmailAuthError) {
+        return res.status(500).json({
+          success: false,
+          message:
+            'SMTP authentication failed. If you are using Gmail, create an App Password and set `EMAIL_USER` and `EMAIL_PASS` environment variables. See https://support.google.com/accounts/answer/185833 for details.',
+          details: errMsg
+        })
+      }
+
+      return res.status(500).json({ success: false, message: errMsg })
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body
+    if (!email || !otp) return res.status(400).json({ success: false, message: 'Email and OTP are required' })
+
+    const user = await Farmer.findOne({ email })
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    if (!user.otp || !user.otpExpiry || user.otpExpiry < Date.now()) {
+      return res.status(400).json({ success: false, message: 'OTP expired or not set' })
+    }
+
+    const match = await bcrypt.compare(otp, user.otp)
+    if (!match) return res.status(400).json({ success: false, message: 'Invalid OTP' })
+
+    // OTP is valid — issue a short-lived reset token
+    const resetToken = jwt.sign({ id: user._id, purpose: 'reset' }, process.env.SECRET_KEY, { expiresIn: '15m' })
+
+    // clear stored otp to prevent reuse
+    user.otp = null
+    user.otpExpiry = null
+    await user.save()
+
+    return res.status(200).json({ success: true, resetToken })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body
+    if (!resetToken || !newPassword) return res.status(400).json({ success: false, message: 'Reset token and new password are required' })
+
+    let payload
+    try {
+      payload = jwt.verify(resetToken, process.env.SECRET_KEY)
+    } catch (err) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' })
+    }
+
+    if (!payload || payload.purpose !== 'reset' || !payload.id) {
+      return res.status(400).json({ success: false, message: 'Invalid reset token' })
+    }
+
+    const user = await Farmer.findById(payload.id)
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    user.password = hashedPassword
+    user.otp = null
+    user.otpExpiry = null
+    await user.save()
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully' })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
 
 export const updateFarmer = async (req, res) => {
   try {
