@@ -7,6 +7,7 @@ import userRoute from "./routes/userRoute.js";
 import cropRoute from "./routes/cropRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import dataRoute from "./routes/dataRoute.js";
+import smartAlertRoute from "./routes/smartAlertRoute.js";
 import { Buffer } from "buffer";
 import fetch from "node-fetch"; // if using Node 18+, native fetch is fine
 
@@ -31,6 +32,7 @@ app.use("/user", userRoute);
 app.use("/crop", cropRoute);
 app.use("/panel", adminRoute);
 app.use("/data", dataRoute);  // Bilingual data options (crop types, storage types, divisions)
+app.use("/api/smart-alert", smartAlertRoute);  // Smart Bangla alert generation with LLM
 
 // -------------------- CROP SCANNER API --------------------
 
