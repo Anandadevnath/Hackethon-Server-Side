@@ -29,7 +29,7 @@ export const cropBatchSchema = yup.object().shape({
     division: yup.string().required('division is required'),
     district: yup.string().required('district is required')
   }).required('storageLocation is required'),
-  storageType: yup.string().oneOf(['Jute Bag Stack','Silo','Open Area']).required('storageType is required'),
+  storageType: yup.string().oneOf(['Jute Bag Stack', 'Silo', 'Open Area', 'Cold Storage', 'Warehouse']).required('storageType is required'),
   notes: yup.string().optional()
 });
 
@@ -52,6 +52,6 @@ export const cropBatchUpdateSchema = yup.object().shape({
     division: yup.string().optional(),
     district: yup.string().optional()
   }).optional(),
-  storageType: yup.string().oneOf(['Jute Bag Stack','Silo','Open Area']).optional(),
+  storageType: yup.string().oneOf(['Jute Bag Stack', 'Silo', 'Open Area', 'Cold Storage', 'Warehouse']).optional(),
   notes: yup.string().optional()
 });

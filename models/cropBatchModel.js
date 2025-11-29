@@ -81,7 +81,11 @@ const cropBatchSchema = new mongoose.Schema({
     division: { type: String, required: true },
     district: { type: String, required: true }
   },
-  storageType: { type: String, enum: ['Jute Bag Stack', 'Silo', 'Open Area'], required: true },
+  storageType: { 
+    type: String, 
+    enum: ['Jute Bag Stack', 'Silo', 'Open Area', 'Cold Storage', 'Warehouse'], 
+    required: true 
+  },
   notes: { type: String }
 }, { timestamps: true });
 
