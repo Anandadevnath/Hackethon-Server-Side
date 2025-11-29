@@ -6,8 +6,8 @@ import connectDB from "./database/db.js";
 import userRoute from "./routes/userRoute.js";
 import cropRoute from "./routes/cropRoute.js";
 import adminRoute from "./routes/adminRoute.js";
+import pestRoute from "./routes/pestServer.js";
 import { Buffer } from "buffer";
-import fetch from "node-fetch"; // if using Node 18+, native fetch is fine
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +29,7 @@ connectDB();
 app.use("/user", userRoute);
 app.use("/crop", cropRoute);
 app.use("/panel", adminRoute);
+app.use("/", pestRoute);
 
 // -------------------- CROP SCANNER API --------------------
 
@@ -79,6 +80,25 @@ app.post("/api/predict", async (req, res) => {
   } catch (err) {
     console.error("Server error:", err);
     return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Gemini
+app.post("/api/ai", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+    });
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+
+    res.json({ reply: text });
+  } catch (error) {
+    console.error("Gemini error:", error);
+    res.status(500).json({ error: "AI request failed" });
   }
 });
 
