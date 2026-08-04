@@ -1,4 +1,4 @@
-// index.js
+// server.js
 import express from "express";
 import "dotenv/config";
 import cors from "cors";
@@ -7,21 +7,7 @@ import userRoute from "./routes/userRoute.js";
 import cropRoute from "./routes/cropRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import pestRoute from "./routes/pestServer.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-console.log("Starting server...");
-
-let genAI;
-try {
-  if (process.env.GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    console.log("Gemini initialized.");
-  } else {
-    console.warn("GEMINI_API_KEY is missing, AI features will fail.");
-  }
-} catch (e) {
-  console.error("Gemini initialization failed:", e);
-}
+import { Buffer } from "buffer";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,29 +17,13 @@ const PORT = process.env.PORT || 3000;
 // JSON parsing, allow up to 10MB for image uploads
 app.use(express.json({ limit: "10mb" }));
 
-// CORS: allow requests from all origins
-app.use(cors());
+// CORS: allow requests from any origin. Update in production as needed
+app.use(cors({ origin: true, credentials: true }));
 
 // -------------------- DATABASE --------------------
-connectDB().catch(err => console.error("Database connection failed, but proceeding anyway:", err));
+connectDB();
 
 // -------------------- ROUTES --------------------
-
-app.get("/", (req, res) => {
-  res.json({
-    message: "Welcome to the Hackathon Backend API",
-    endpoints: {
-      user: "/user",
-      crop: "/crop",
-      panel: "/panel",
-      pest: "/",
-      predict: "/api/predict",
-      ai: "/api/ai",
-      tts: "/api/tts",
-      ttsCheck: "/api/tts/check-model"
-    }
-  });
-});
 
 // Main app routes
 app.use("/user", userRoute);
@@ -315,10 +285,6 @@ app.get("/api/tts/check-model", async (req, res) => {
 
 
 // -------------------- START SERVER --------------------
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
