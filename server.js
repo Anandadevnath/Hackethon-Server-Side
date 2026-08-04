@@ -18,8 +18,13 @@ const PORT = process.env.PORT || 3000;
 // JSON parsing, allow up to 10MB for image uploads
 app.use(express.json({ limit: "10mb" }));
 
-// CORS: allow requests from any origin. Update in production as needed
-app.use(cors({ origin: true, credentials: true }));
+// CORS: allow requests from specific origin
+app.use(cors({
+    origin: ["http://localhost:5173", "https://hackethon-client-side.vercel.app"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // -------------------- DATABASE --------------------
 connectDB();
