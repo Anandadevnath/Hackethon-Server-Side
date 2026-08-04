@@ -2,6 +2,7 @@ services:
   - type: web
     name: hackethon-server-side
     env: node
+    rootDir: Hackethon-Server-Side
     envVars:
       - key: NODE_VERSION
         value: "20.18.0"
