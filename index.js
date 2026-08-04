@@ -13,8 +13,12 @@ console.log("Starting server...");
 
 let genAI;
 try {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key_for_debug");
-  console.log("Gemini initialized.");
+  if (process.env.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    console.log("Gemini initialized.");
+  } else {
+    console.warn("GEMINI_API_KEY is missing, AI features will fail.");
+  }
 } catch (e) {
   console.error("Gemini initialization failed:", e);
 }
