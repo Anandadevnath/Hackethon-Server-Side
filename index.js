@@ -8,6 +8,9 @@ import cropRoute from "./routes/cropRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import pestRoute from "./routes/pestServer.js";
 import { Buffer } from "buffer";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
