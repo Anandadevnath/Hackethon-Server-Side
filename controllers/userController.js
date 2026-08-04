@@ -17,9 +17,9 @@ export const registerUser = async (req,res) =>{
       // location is required by validator; no BD-specific validation applied
       const existingUser = await Farmer.findOne({email})
       if(existingUser){
-         return res.status(400).json({
+         return res.status(409).json({
             success:false,
-            message:"User already exists"
+            message:"User already exists with this email"
           })
       }
       
@@ -95,18 +95,18 @@ export const loginUser = async(req,res) =>{
 
       const user = await Farmer.findOne({email})
       if(!user){
-        return res.status(404).json({
+        return res.status(401).json({
             success:false,
-            message:"Unregistered access"
+            message:"Invalid email or password"
         })
       }
 
       const passwordCheck = await bcrypt.compare(password,user.password)
 
       if(!passwordCheck){
-        return res.status(402).json({
+        return res.status(401).json({
             success:false,
-            message:"Incorrect password"
+            message:"Invalid email or password"
         })
       }
       
