@@ -1,12 +1,12 @@
-// server.js
+// server.js -> api/index.js
 import express from "express";
 import "dotenv/config";
 import cors from "cors";
-import connectDB from "./database/db.js";
-import userRoute from "./routes/userRoute.js";
-import cropRoute from "./routes/cropRoute.js";
-import adminRoute from "./routes/adminRoute.js";
-import pestRoute from "./routes/pestServer.js";
+import connectDB from "../database/db.js";
+import userRoute from "../routes/userRoute.js";
+import cropRoute from "../routes/cropRoute.js";
+import adminRoute from "../routes/adminRoute.js";
+import pestRoute from "../routes/pestServer.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -22,7 +22,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(cors());
 
 // -------------------- DATABASE --------------------
-connectDB();
+connectDB().catch(err => console.error("Database connection failed, but proceeding anyway:", err));
 
 // -------------------- ROUTES --------------------
 
