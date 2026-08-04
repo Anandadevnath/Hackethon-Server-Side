@@ -17,8 +17,15 @@ const PORT = process.env.PORT || 3000;
 // JSON parsing, allow up to 10MB for image uploads
 app.use(express.json({ limit: "10mb" }));
 
-// CORS: allow requests from any origin.
-app.use(cors());
+// CORS: allow requests from any origin with credentials.
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow any origin. Note: This is permissive and might be a security risk.
+    // Ensure you trust all origins that will access this API.
+    callback(null, true);
+  },
+  credentials: true
+}));
 
 // -------------------- DATABASE --------------------
 connectDB();
