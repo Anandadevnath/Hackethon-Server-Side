@@ -271,6 +271,21 @@ app.get("/api/tts/check-model", async (req, res) => {
 
 
 // -------------------- START SERVER --------------------
+app.get("/", (req, res) => {
+  res.json({
+    message: "Welcome to the NoteApp Backend API",
+    endpoints: {
+      user: "/user",
+      crop: "/crop",
+      panel: "/panel",
+      pest: "/",
+      predict: "/api/predict",
+      tts: "/api/tts",
+      checkModel: "/api/tts/check-model"
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
