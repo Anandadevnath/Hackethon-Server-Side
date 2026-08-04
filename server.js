@@ -26,6 +26,22 @@ connectDB();
 
 // -------------------- ROUTES --------------------
 
+app.get("/", (req, res) => {
+  res.json({
+    message: "Welcome to the Hackathon Backend API",
+    endpoints: {
+      user: "/user",
+      crop: "/crop",
+      panel: "/panel",
+      pest: "/",
+      predict: "/api/predict",
+      ai: "/api/ai",
+      tts: "/api/tts",
+      ttsCheck: "/api/tts/check-model"
+    }
+  });
+});
+
 // Main app routes
 app.use("/user", userRoute);
 app.use("/crop", cropRoute);
