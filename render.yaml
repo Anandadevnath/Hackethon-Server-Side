@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: hackethon-server-side
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
