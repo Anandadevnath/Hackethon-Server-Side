@@ -272,18 +272,22 @@ app.get("/api/tts/check-model", async (req, res) => {
 
 // -------------------- START SERVER --------------------
 app.get("/", (req, res) => {
-  res.json({
-    message: "Welcome to the NoteApp Backend API",
-    endpoints: {
-      user: "/user",
-      crop: "/crop",
-      panel: "/panel",
-      pest: "/",
-      predict: "/api/predict",
-      tts: "/api/tts",
-      checkModel: "/api/tts/check-model"
-    }
-  });
+  res.send(`
+    <html>
+      <body>
+        <h1>Welcome to the NoteApp Backend API</h1>
+        <ul>
+          <li>User: <a href="/user">/user</a></li>
+          <li>Crop: <a href="/crop">/crop</a></li>
+          <li>Panel: <a href="/panel">/panel</a></li>
+          <li>Pest: <a href="/pest">/pest</a></li>
+          <li>Predict: <a href="/api/predict">/api/predict</a></li>
+          <li>TTS: <a href="/api/tts">/api/tts</a></li>
+          <li>Check Model: <a href="/api/tts/check-model">/api/tts/check-model</a></li>
+        </ul>
+      </body>
+    </html>
+  `);
 });
 
 app.listen(PORT, () => {
