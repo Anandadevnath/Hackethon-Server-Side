@@ -8,7 +8,16 @@ import cropRoute from "./routes/cropRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import pestRoute from "./routes/pestServer.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+console.log("Starting server...");
+
+let genAI;
+try {
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key_for_debug");
+  console.log("Gemini initialized.");
+} catch (e) {
+  console.error("Gemini initialization failed:", e);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
