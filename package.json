@@ -13,7 +13,6 @@
     "build": "echo 'No build required'"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@huggingface/inference": "^4.13.4",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",

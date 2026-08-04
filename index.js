@@ -8,9 +8,6 @@ import cropRoute from "./routes/cropRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import pestRoute from "./routes/pestServer.js";
 import { Buffer } from "buffer";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -89,21 +86,7 @@ app.post("/api/predict", async (req, res) => {
 
 // Gemini
 app.post("/api/ai", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-    });
-
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-
-    res.json({ reply: text });
-  } catch (error) {
-    console.error("Gemini error:", error);
-    res.status(500).json({ error: "AI request failed" });
-  }
+  res.status(501).json({ error: "AI feature has been removed" });
 });
 
 // tts post req
